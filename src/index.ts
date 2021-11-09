@@ -1,9 +1,9 @@
+import 'reflect-metadata'
 import { ApolloServer } from 'apollo-server-express';
 import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
-const express = require('express')
-const http = require('http')
-
-
+import express = require('express');
+import http = require('http')
+import { createConnection } from 'typeorm';
 const typeDefs = `
 	type Query{
 		hello(name : String!) : String!
@@ -15,7 +15,6 @@ const resolvers = {
 		hello: (_: any, { name }: any) => `hhello ${name || "World"}`
 	}
 };
-
 async function main(typeDefs: any, resolvers: any) {
 	// Required logic for integrating with Express
 	const app = express();
@@ -29,18 +28,22 @@ async function main(typeDefs: any, resolvers: any) {
 	});
 
 	// More required logic for integrating with Express
-	await server.start();
-	server.applyMiddleware({
-		app,
+	createConnection().then(async () => {
 
-		// By default, apollo-server hosts its GraphQL endpoint at the
-		// server root. However, *other* Apollo Server packages host it at
-		// /graphql. Optionally provide this to match apollo-server.
-		path: '/'
-	});
+		await server.start();
+		server.applyMiddleware({
+			app,
 
-	// Modified server startup
-	await new Promise<void>(resolve => httpServer.listen({ port: 4000 }, resolve));
-	console.log(`🚀 Server ready at http://localhost:4000${server.graphqlPath}`);
+			// By default, apollo-server hosts its GraphQL endpoint at the
+			// server root. However, *other* Apollo Server packages host it at
+			// /graphql. Optionally provide this to match apollo-server.
+			path: '/'
+		});
+		// Modified server startup
+		await new Promise<void>(resolve => httpServer.listen({ port: 4000 }, resolve));
+		console.log(`🚀 Server ready at http://localhost:4000${server.graphqlPath}`);
+	})
+
 }
+
 main(typeDefs, resolvers)
