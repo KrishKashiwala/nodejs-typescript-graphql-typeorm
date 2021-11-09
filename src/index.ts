@@ -4,15 +4,64 @@ import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import express = require('express');
 import http = require('http')
 import { createConnection } from 'typeorm';
+import { ResolverMap } from './types/ResolverTypes';
+import { User } from './entity/User';
 const typeDefs = `
+	type User{
+		id : Int!
+		firstName : String!
+		lastName : String!
+		age : Int!
+		email : String!
+	}
 	type Query{
-		hello(name : String!) : String!
+		hello(name : String):String!
+		user(id : Int!):User!
+		users:[User!]!
+	}
+	type Mutation{
+		createUser(firstName : String!, lastName : String! , age : Int! , email  :String!) : User!
+		updateUser(id : Int!,firstName : String, lastName : String , age : Int , email  :String) : Boolean
+		deleteUser(id : Int!):Boolean
 	}
 `
 
-const resolvers = {
+const resolvers: ResolverMap = {
 	Query: {
-		hello: (_: any, { name }: any) => `hhello ${name || "World"}`
+		hello: (_: any, { name }: any) => `hhello ${name || "World"}`,
+		user: (_, { id }) => {
+			return User.findOne({ where: { id: id } })
+		},
+		users: () => User.find()
+	},
+	Mutation: {
+		createUser: async (_, args) => {
+			const user = await User.create(args)
+			User.save(user)
+			return user;
+		},
+		updateUser: async (_, { id, ...args }) => {
+			try {
+				const user = await User.findOne({ id: id })
+				if (user) {
+					await User.update(id, args)
+				}
+			} catch (err) {
+				console.log(err);
+				return false;
+			}
+
+			return true;
+		},
+		deleteUser: async (_, { id }) => {
+			try {
+				await User.delete(id)
+			} catch (e) {
+				console.log(e)
+				return false;
+			}
+			return true
+		}
 	}
 };
 async function main(typeDefs: any, resolvers: any) {
